@@ -61,19 +61,26 @@ def get_response_for_html(text):
 async def fetch_habr_page(session, params):
     url = f'https://habr.com{params}'
     async with session.get(url) as response:
+        proxy_response_headers = [
+            (name, value)
+            for name, value
+            in response.headers.items()
+            if name.upper() not in ('CONTENT-ENCODING', 'TRANSFER-ENCODING')]
         if 'text/html' not in response.headers['Content-Type']:
-            return web.Response(headers=response.headers,
+            return web.Response(headers=proxy_response_headers,
                                 status=response.status,
                                 body=await response.read())
         text = await response.text()
-        headers = response.headers
         status = response.status
-
     page = get_response_for_html(text)
+    print(proxy_response_headers)
     proxied_response = web.Response(
-        headers=headers,
         status=status,
-        text=str(page))
+        text=str(page),
+        headers=proxy_response_headers)
+
+    # Copy response headers, except for Content-Encoding header,
+    # since unfortunately aiohttp transparently decodes content.
     return proxied_response
 
 
