@@ -75,7 +75,7 @@ async def fetch_habr_page(session, params):
     page = get_response_for_html(text)
     proxied_response = web.Response(
         status=status,
-        text=page.prettify(formatter=None),
+        text=str(page).replace('https://habr.com', 'http://127.0.0.1:8080'),
         headers=proxy_response_headers)
 
     # Copy response headers, except for Content-Encoding header,
