@@ -6,7 +6,7 @@ from aiohttp import web
 
 
 def find_words(s):
-    return re.findall(r'\w+', s)
+    return re.findall(r'\b[^\d\W]+\b', s)
 
 
 def is_habr_url(url):
@@ -17,10 +17,10 @@ def is_habr_url(url):
 
 def change_text(s):
     words = find_words(s)
-    changed_words = []
+    changed_words = set()
     for word in words:
         if len(word) == 6:
-            changed_words.append((word, word + '™'))
+            changed_words.add((word, word + '™'))
     for word, change_to in changed_words:
         s = s.replace(word, change_to)
     return s
@@ -47,7 +47,7 @@ def change_text_on_page(page):
 
 
 def get_response_for_html(text):
-    page = bs4.BeautifulSoup(text)
+    page = bs4.BeautifulSoup(text, "lxml")
 
     for a in page.find_all('a'):
         if is_habr_url(a.get('href', '')):
@@ -73,10 +73,9 @@ async def fetch_habr_page(session, params):
         text = await response.text()
         status = response.status
     page = get_response_for_html(text)
-    print(proxy_response_headers)
     proxied_response = web.Response(
         status=status,
-        text=str(page),
+        text=page.prettify(formatter=None),
         headers=proxy_response_headers)
 
     # Copy response headers, except for Content-Encoding header,
@@ -86,7 +85,6 @@ async def fetch_habr_page(session, params):
 
 async def handle(request):
     params = request.path_qs
-    print('New request', params)
     async with aiohttp.ClientSession() as session:
         return await fetch_habr_page(session, params)
 
